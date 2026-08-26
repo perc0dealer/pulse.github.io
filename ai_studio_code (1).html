@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PULSE — крипто-сигналы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14;
+    --surface:#121922;
+    --surface-2:#1A2330;
+    --line:#232E3D;
+    --text:#E8EDF2;
+    --muted:#6E7A89;
+    --long:#3ECF8E;
+    --short:#FF5C6C;
+    --accent:#7C9CFF;
+    --gold:#E8B95C;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(circle at 50% 0%, #131C27 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+  }
+  .device{ width:100%; max-width:430px; min-height:100vh; display:flex; flex-direction:column; position:relative; }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .display{font-family:'Space Grotesk', sans-serif;}
+  header{ padding:18px 20px 14px; position:sticky; top:0; z-index:20; background:linear-gradient(180deg, rgba(11,15,20,0.97) 70%, rgba(11,15,20,0)); backdrop-filter:blur(6px); }
+  .head-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+  .wordmark{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:19px; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;}
+  .wordmark .dot{width:7px; height:7px; border-radius:50%; background:var(--long); box-shadow:0 0 8px var(--long); animation:blink 2.4s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1} 50%{opacity:.35}}
+  .status-chip{ font-size:11px; color:var(--text); font-family:'JetBrains Mono',monospace; border:1px solid var(--line); padding:4px 10px 4px 9px; border-radius:20px; letter-spacing:0.3px; display:flex; align-items:center; gap:5px; background:var(--surface); cursor: pointer; }
+  .status-chip svg{width:11px; height:11px; opacity:.7;}
+  .pulse-wrap{position:relative; height:44px; border-radius:12px; overflow:hidden; background:var(--surface); border:1px solid var(--line);}
+  .pulse-wrap svg{width:100%; height:100%; display:block;}
+  #pulsePath{stroke:var(--long); stroke-width:1.6; fill:none; filter:drop-shadow(0 0 4px rgba(62,207,142,0.55));}
+  .pulse-label{position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:9.5px; letter-spacing:1.2px; color:var(--muted); text-transform:uppercase; font-family:'JetBrains Mono',monospace;}
+  main{flex:1; padding:16px 20px 100px; overflow-y:auto;}
+  .screen{display:none; animation:fade .25s ease;}
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .section-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; margin:18px 0 10px; color:var(--text); display:flex; justify-content:space-between; align-items:center;}
+  .section-title span.count{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); font-weight:400;}
+  .chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-bottom:4px;}
+  .chip{flex:none; font-size:12.5px; padding:7px 14px; border-radius:20px; border:1px solid var(--line); color:var(--muted); background:var(--surface); white-space:nowrap;}
+  .chip.active{color:var(--bg); background:var(--text); border-color:var(--text); font-weight:600;}
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px; position:relative; }
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start;}
+  .pair{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px;}
+  .badge{font-size:10.5px; font-weight:700; letter-spacing:0.5px; padding:3px 8px; border-radius:6px;}
+  .badge.long{background:rgba(62,207,142,0.14); color:var(--long);}
+  .badge.short{background:rgba(255,92,108,0.14); color:var(--short);}
+  .time{font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace;}
+  .card-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px;}
+  .metric-label{font-size:9.5px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:3px;}
+  .metric-val{font-family:'JetBrains Mono',monospace; font-size:13.5px; font-weight:500;}
+  .confidence-row{display:flex; align-items:center; gap:8px; margin-top:14px;}
+  .confidence-track{flex:1; height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden;}
+  .confidence-fill{height:100%; background:linear-gradient(90deg, var(--accent), var(--long));}
+  .confidence-num{font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--muted);}
+  .locked{filter:blur(5px); user-select:none; pointer-events:none;}
+  .lock-overlay{ position:absolute; inset:0; border-radius:var(--radius); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(18,25,34,0.55); text-align:center; padding:20px; }
+  .lock-overlay .ic{width:26px; height:26px; opacity:.9;}
+  .lock-overlay p{font-size:12px; color:var(--muted); max-width:220px;}
+  .lock-overlay .pro-btn{margin-top:2px; font-size:12px; font-weight:600; color:var(--bg); background:var(--gold); padding:7px 16px; border-radius:20px; cursor: pointer;}
+  .ai-disclaimer{ font-size:11.5px; color:var(--muted); background:var(--surface); border:1px dashed var(--line); border-radius:12px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
+  .chat-wrap{display:flex; flex-direction:column; gap:10px;}
+  .msg{max-width:82%; padding:11px 14px; border-radius:16px; font-size:13.5px; line-height:1.5;}
+  .msg.ai{background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px; align-self:flex-start;}
+  .msg.ai .tag{display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--accent); letter-spacing:1px; margin-bottom:5px;}
+  .msg.user{background:var(--accent); color:#0B0F14; border-bottom-right-radius:4px; align-self:flex-end; font-weight:500;}
+  .quick-prompts{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0;}
+  .qp{font-size:12px; padding:8px 12px; border-radius:12px; background:var(--surface); border:1px solid var(--line); color:var(--text); cursor: pointer;}
+  .chat-input{ position:fixed; bottom:85px; left:0; right:0; display:flex; justify-content:center; padding:0 16px; z-index:15; }
+  .chat-input-inner{ width:100%; max-width:398px; display:flex; gap:8px; background:var(--surface-2); border:1px solid var(--line); border-radius:24px; padding:6px 6px 6px 16px; align-items:center; }
+  .chat-input-inner input{flex:1; background:none; border:none; color:var(--text); font-size:13.5px; outline:none;}
+  .send-btn{width:34px; height:34px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; flex:none; cursor: pointer;}
+  .pro-card{ background:linear-gradient(135deg, #1A2333 0%, #0F1620 100%); border:1px solid var(--line); border-radius:20px; padding:22px; margin-bottom:18px; position:relative; overflow:hidden; }
+  .pro-card::after{content:""; position:absolute; width:180px; height:180px; background:radial-gradient(circle, rgba(124,156,255,0.18), transparent 70%); top:-60px; right:-60px;}
+  .pro-eyebrow{font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:1.5px; color:var(--gold); text-transform:uppercase;}
+  .pro-price{font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; margin:8px 0 2px;}
+  .pro-price span{font-size:14px; color:var(--muted); font-weight:400;}
+  .pro-sub-price{font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-bottom:14px;}
+  .benefits{list-style:none; display:flex; flex-direction:column; gap:9px; margin-bottom:18px;}
+  .benefits li{font-size:13px; display:flex; gap:9px; align-items:flex-start; color:var(--text);}
+  .benefits li::before{content:"◆"; color:var(--long); font-size:8px; margin-top:4px;}
+  .pay-btn{ width:100%; padding:14px; border-radius:14px; background:var(--text); color:var(--bg); font-weight:600; font-size:14px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px; cursor: pointer; }
+  .pay-note{text-align:center; font-size:10.5px; color:var(--muted); margin-top:10px; font-family:'JetBrains Mono',monospace;}
+  .ring-row{display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin-bottom:12px;}
+  .ring{width:44px; height:44px; border-radius:50%; background:conic-gradient(var(--long) 0% 68%, var(--surface-2) 68% 100%); display:flex; align-items:center; justify-content:center; flex:none;}
+  .ring-inner{width:32px; height:32px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--long);}
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:14px 16px; cursor:pointer; }
+  .settings-row .left{display:flex; align-items:center; gap:12px;}
+  .settings-row .ic-wrap{width:34px; height:34px; border-radius:10px; background:var(--surface-2); display:flex; align-items:center; justify-content:center;}
+  .settings-row .label{font-size:13.5px; font-weight:500;}
+  .settings-row .value{font-size:11.5px; color:var(--muted); margin-top:1px;}
+  nav{ position:fixed; bottom:0; left:0; right:0; display:flex; justify-content:center; z-index:30; background:linear-gradient(0deg, rgba(11,15,20,1) 60%, rgba(11,15,20,0)); padding:14px 0 25px; }
+  .nav-inner{ width:calc(100% - 32px); max-width:398px; display:flex; background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:6px; gap:4px; }
+  .nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 0; border-radius:14px; color:var(--muted); font-size:10.5px; cursor: pointer;}
+  .nav-btn.active{background:var(--surface-2); color:var(--text);}
+  .nav-btn svg{width:18px; height:18px;}
+  .modal-overlay{ position:fixed; inset:0; background:rgba(6,9,13,0.72); backdrop-filter:blur(3px); display:flex; align-items:flex-end; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .modal-overlay.open{opacity:1; pointer-events:auto;}
+  .modal-sheet{ width:100%; max-width:430px; background:var(--surface); border:1px solid var(--line); border-bottom:none; border-radius:24px 24px 0 0; padding:22px 20px 28px; transform:translateY(16px); transition:transform .25s ease; }
+  .modal-overlay.open .modal-sheet{transform:translateY(0);}
+  .modal-handle{width:36px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 16px;}
+  .modal-title{font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; margin-bottom:4px;}
+  .modal-sub{font-size:12.5px; color:var(--muted); margin-bottom:18px; line-height:1.5;}
+  .currency-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .currency-opt{ border:1px solid var(--line); background:var(--surface-2); border-radius:14px; padding:13px 14px; display:flex; align-items:center; gap:10px; text-align:left; cursor: pointer; color: inherit; }
+  .currency-opt.selected{border-color:var(--accent); background:rgba(124,156,255,0.1);}
+  .currency-opt .sym{font-family:'JetBrains Mono',monospace; font-size:16px; width:22px; text-align:center; color:var(--accent);}
+  .currency-opt .name{font-size:12.5px; font-weight:500;}
+  .currency-opt .code{font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="device">
+  <header>
+    <div class="head-row">
+      <div class="wordmark"><span class="dot"></span>PULSE</div>
+      <button class="status-chip" id="currencyTrigger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5h4a2 2 0 1 1 0 4H9.5a2 2 0 1 0 0 4H15"/></svg>
+        <span id="currencyChipLabel">USD</span>
+      </button>
+    </div>
+    <div class="pulse-wrap">
+      <span class="pulse-label">live market pulse</span>
+      <svg viewBox="0 0 400 44" preserveAspectRatio="none">
+        <path id="pulsePath" d="M0,22 L400,22"/>
+      </svg>
+    </div>
+  </header>
+
+  <main>
+    <section class="screen active" id="screen-signals">
+      <div class="chips"><div class="chip active">Все</div><div class="chip">BTC</div><div class="chip">ETH</div><div class="chip">Альты</div></div>
+      <div class="section-title">Свежие сигналы <span class="count">обновлено только что</span></div>
+      <div class="card">
+        <div class="card-top"><div class="pair">BTC/USDT <span class="badge long">LONG</span></div><div class="time">14:32</div></div>
+        <div class="card-grid">
+          <div><div class="metric-label">Вход</div><div class="metric-val currency-value" data-usd="67240">67 240</div></div>
+          <div><div class="metric-label">Цель</div><div class="metric-val currency-value" data-usd="68900">68 900</div></div>
+          <div><div class="metric-label">Стоп</div><div class="metric-val currency-value" data-usd="66500">66 500</div></div>
+        </div>
+        <div class="confidence-row"><div class="confidence-track"><div class="confidence-fill" style="width:74%"></div></div><div class="confidence-num">74% сила сигнала</div></div>
+      </div>
+      <div class="card">
+        <div class="locked">
+          <div class="card-top"><div class="pair">SOL/USDT <span class="badge long">LONG</span></div><div class="time">13:20</div></div>
+          <div class="card-grid">
+            <div><div class="metric-label">Вход</div><div class="metric-val currency-value" data-usd="184.2">184.2</div></div>
+            <div><div class="metric-label">Цель</div><div class="metric-val currency-value" data-usd="201.0">201.0</div></div>
+            <div><div class="metric-label">Стоп</div><div class="metric-val currency-value" data-usd="176.5">176.5</div></div>
+          </div>
+        </div>
+        <div class="lock-overlay">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#E8B95C" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <p>Ранние и более точные сигналы — только в PULSE PRO</p>
+          <div class="pro-btn">Открыть доступ</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-ai">
+      <div class="ai-disclaimer">Ассистент анализирует данные и объясняет контекст рынка. Это не индивидуальная инвестиционная рекомендация.</div>
+      <div class="chat-wrap">
+        <div class="msg ai"><span class="tag">PULSE AI</span>Привет 👋 Спрашивай про любую монету — разберу графики и объёмы.</div>
+      </div>
+      <div class="quick-prompts">
+        <div class="qp">Что по BTC?</div>
+        <div class="qp">Анализ рынка на сегодня</div>
+        <div class="qp">Лучшие альты сейчас</div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-profile">
+      <div class="pro-card">
+        <div class="pro-eyebrow">Pulse Pro</div>
+        <div class="pro-price"><span class="currency-value" data-usd="2.2">2.2</span><span> / месяц</span></div>
+        <ul class="benefits">
+          <li>Все сигналы без задержки</li>
+          <li>Безлимитный AI-ассистент</li>
+          <li>Закрытый чат PRO-сообщества</li>
+        </ul>
+        <div class="pay-btn">Оплатить в Telegram</div>
+      </div>
+      <div class="section-title">Настройки</div>
+      <div class="settings-row" id="currencySettingsRow">
+        <div class="left"><div class="ic-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8EDF2" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5h4a2 2 0 1 1 0 4H9.5a2 2 0 1 0 0 4H15"/></svg></div>
+          <div><div class="label">Валюта отображения</div><div class="value" id="currentCurrencyLabel">USD</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="chat-input" id="chatInput" style="display:none;">
+    <div class="chat-input-inner">
+      <input type="text" id="aiQuery" placeholder="Спроси про рынок…">
+      <div class="send-btn" id="aiSendBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0B0F14" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </div>
+  </div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-btn active" data-target="screen-signals" data-input="none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V13M10 19V9M16 19V5M22 19H2"/></svg>Сигналы</div>
+      <div class="nav-btn" data-target="screen-ai" data-input="flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a7 7 0 0 0-7 7c0 3 1.5 4.8 2 6l-1 3 3.3-1a7 7 0 0 0 2.7.5 7 7 0 0 0 0-14z"/></svg>AI</div>
+      <div class="nav-btn" data-target="screen-profile" data-input="none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>Профиль</div>
+    </div>
+  </nav>
+
+  <div class="modal-overlay" id="currencyModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Выбери валюту</div>
+      <div class="currency-grid" id="currencyGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  function sendToBot(data) {
+    tg.sendData(JSON.stringify(data));
+    tg.close();
+  }
+
+  // AI Logic
+  const aiSendBtn = document.getElementById('aiSendBtn');
+  const aiInput = document.getElementById('aiQuery');
+  aiSendBtn.addEventListener('click', () => {
+    const text = aiInput.value.trim();
+    if(text) sendToBot({ action: "ai_ask", text: text });
+  });
+  document.querySelectorAll('.qp').forEach(qp => {
+    qp.addEventListener('click', () => sendToBot({ action: "ai_ask", text: qp.textContent }));
+  });
+
+  // Pay Logic
+  document.querySelectorAll('.pay-btn, .pro-btn').forEach(btn => {
+    btn.addEventListener('click', () => sendToBot({ action: "buy_pro" }));
+  });
+
+  // Currency Logic
+  const CURRENCIES = {
+    USD: { name: "Доллар", symbol: "$", rate: 1, pos: "prefix" },
+    RUB: { name: "Рубль", symbol: "₽", rate: 91, pos: "suffix" },
+    BYN: { name: "Бел. рубль", symbol: "Br", rate: 3.2, pos: "suffix" },
+    EUR: { name: "Евро", symbol: "€", rate: 0.92, pos: "prefix" },
+  };
+
+  function applyCurrency(code){
+    const cur = CURRENCIES[code];
+    document.querySelectorAll('.currency-value').forEach(el => {
+      const usd = parseFloat(el.dataset.usd);
+      const val = (usd * cur.rate).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+      el.textContent = cur.pos === 'prefix' ? cur.symbol + val : val + ' ' + cur.symbol;
+    });
+    document.getElementById('currencyChipLabel').textContent = code;
+    localStorage.setItem('pulse_cur', code);
+  }
+
+  const grid = document.getElementById('currencyGrid');
+  Object.keys(CURRENCIES).forEach(code => {
+    const b = document.createElement('div');
+    b.className = 'currency-opt';
+    b.innerHTML = `<span class="sym">${CURRENCIES[code].symbol}</span><span class="name">${CURRENCIES[code].name}</span>`;
+    b.onclick = () => { applyCurrency(code); document.getElementById('currencyModal').classList.remove('open'); };
+    grid.appendChild(b);
+  });
+
+  document.getElementById('currencyTrigger').onclick = () => document.getElementById('currencyModal').classList.add('open');
+  document.getElementById('currencySettingsRow').onclick = () => document.getElementById('currencyModal').classList.add('open');
+  applyCurrency(localStorage.getItem('pulse_cur') || 'USD');
+
+  // Navigation
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.nav-btn, .screen').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.target).classList.add('active');
+      document.getElementById('chatInput').style.display = btn.dataset.input;
+    };
+  });
+
+  // Pulse Line
+  const path = document.getElementById('pulsePath');
+  let t = 0;
+  function animate(){
+    t += 3;
+    let d = `M0,22`;
+    for(let x=0; x<=400; x+=4){
+      const local = (x + t) % 400;
+      let y = 22;
+      if(local % 130 > 40 && local % 130 < 70){
+        const p = (local%130-40)/30;
+        y = 22 - Math.sin(p*Math.PI) * 15;
+      }
+      d += ` L${x},${y}`;
+    }
+    path.setAttribute('d', d);
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>
